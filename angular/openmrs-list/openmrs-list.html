@@ -50,6 +50,3 @@
 <div align="center" ng-show="vm.isSecondLoaderNotificationVisible() && !vm.deleteClicked">
     <b>Loading more pages...</b>
 </div>
-
-<delete-alert ng-show="vm.deleteClicked" on-update="vm.updateDeleteConfirmation(isConfirmed)"></delete-alert>
-<retire-alert ng-show="vm.retireClicked" on-update="vm.updateRetireConfirmation(retireReason, isConfirmed)"></retire-alert>

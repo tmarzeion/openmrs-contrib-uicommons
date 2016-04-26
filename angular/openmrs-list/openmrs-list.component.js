@@ -31,12 +31,15 @@ openmrsList.$inject = ['openmrsRest', '$location'];
 function openmrsList(openmrsRest, $location) {
     var vm = this;
 
+    vm.clickToOpen = function () {
+        ngDialog.open({
+            plain: true,
+            template: '<button>TEST</button>',
+            className: 'ngdialog-theme-default' });
+    };
+
     //vm.logo = openmrs; //TODO: *.png logo image here
     vm.data = [];
-    vm.deleteClicked = false;
-    vm.deleteItem = '';
-    vm.retireClicked = false;
-    vm.retireItem ='';
     vm.isThisOnePageSet = false; //Default
 
     //Default values
@@ -76,40 +79,61 @@ function openmrsList(openmrsRest, $location) {
     };
 
     vm.performAction = function(object, activity) {
+        switch(activity) {
+            case 'edit':
 
-        if (activity === 'edit' || activity === 'view') {
-            edit(object);
-        }
-        else if (activity === 'retire') {
-            showRetireAlert(object);
-        }
-        else if (activity === 'unretire') {
-            unretire(object);
-        }
-        else if (activity === 'purge') {
-            showDeleteAlert(object);
-        }
-        else {
-            console.log('There is no action for activity  \"' + activity + '\"')
-        }
-    };
+                edit(object);
+                break;
+            case 'view':
 
-    vm.updateDeleteConfirmation = function updateDeleteConfirmation(isConfirmed) {
-        if (isConfirmed) {
-            purge(vm.deleteItem);
+                edit(object);
+                break;
+
+            case 'retire':
+                var answer;
+                if (angular.isDefined(object.name)) {
+                    answer = prompt("Enter retire reason for " + object.name + ":", "");
+                }
+                else {
+                    answer = prompt("Enter retire reason:", "");
+                }
+                if (answer.length > 0) {
+                    object.auditInfo.retireReason = answer;
+                    object.retired = true;
+                    var json = angular.toJson(object);
+                    openmrsRest.update(vm.resource, {uuid: object.uuid}, json).then(function(success) {
+                        getData(true);
+                    });
+                }
+                else {
+                    // some logic to tell user if he did something wrong
+                }
+                break;
+
+            case 'unretire':
+                unretire(object);
+                break;
+
+            case 'purge':
+                var r;
+                if (angular.isDefined(object.name)) {
+                    r = confirm("Do you want to delete " + object.name + "?");
+                }
+                else {
+                    r = confirm("Do you want to delete this object?");
+                }
+                if (r == true) {
+                    purge(object);
+                }
+                break;
+
+            default:
+                console.log('There is no action for activity  \"' + activity + '\"')
+                break;
         }
-        vm.deleteClicked = false;
     };
     
     vm.getData = getData;
-
-    vm.updateRetireConfirmation = function updateDeleteConfirmation(retireReason, isConfirmed) {
-        if (isConfirmed) {
-            //TODO: Do something with reason and retire
-            retire(vm.retireItem);
-        }
-        vm.retireClicked = false;
-    };
 
     function getData(listAll) {
         if (listAll) {
@@ -117,7 +141,6 @@ function openmrsList(openmrsRest, $location) {
             openmrsRest.listFull(vm.resource, {limit: vm.limit, includeAll: true}).then(function (firstResponse) {
                 vm.loadingInitialPage = false;
                 vm.data = firstResponse.results;
-
                 vm.isThisOnePageSet = vm.data.length < vm.limit;
 
                 //Check for more data
@@ -172,16 +195,6 @@ function openmrsList(openmrsRest, $location) {
 
     function edit(item) {
         $location.path(vm.redirectionParam + '/' + item.uuid);
-    }
-
-    function showDeleteAlert(item) {
-        vm.deleteItem = item;
-        vm.deleteClicked = true;
-    }
-
-    function showRetireAlert(item) {
-        vm.retireItem = item;
-        vm.retireClicked = true;
     }
 
     //Paging logic:
@@ -255,5 +268,4 @@ function openmrsList(openmrsRest, $location) {
     function isButtonPanelVisible() {
         return !isSecondLoaderNotificationVisible() && !isInitialLoaderImageNotificationVisible()
     }
-
 }
